@@ -373,8 +373,45 @@ class jenkins (
   }
 
   ### Managed resources
-  # Installation is managed in dedicated class
-  require jenkins::install
+  case $jenkins::install {
+
+    package: {
+      require jenkins::repository
+      package { 'jenkins':
+        ensure => $jenkins::manage_package,
+        name   => $jenkins::package,
+      }
+    }
+
+    source: {
+      puppi::netinstall { 'jenkins':
+        url                 => $jenkins::install_source,
+        destination_dir     => $jenkins::install_destination,
+        extract_command     => 'rsync',
+        preextract_command  => $jenkins::install_precommand,
+        postextract_command => $jenkins::install_postcommand,
+      }
+    }
+
+    puppi: {
+      puppi::project::war { 'jenkins':
+        source                   => $jenkins::install_source,
+        deploy_root              => $jenkins::install_destination,
+        predeploy_customcommand  => $jenkins::install_precommand,
+        postdeploy_customcommand => $jenkins::install_postcommand,
+        report_email             => 'root',
+        auto_deploy              => true,
+        check_deploy             => false,
+        run_checks               => false,
+        enable                   => true,
+      }
+    }
+
+    default: {
+    }
+
+  }
+
 
   if $jenkins::source
   or $jenkins::template
@@ -385,7 +422,7 @@ class jenkins (
       mode    => $jenkins::config_file_mode,
       owner   => $jenkins::config_file_owner,
       group   => $jenkins::config_file_group,
-      require => Class['jenkins::install'],
+      require => Package['jenkins'],
       notify  => $jenkins::manage_service_autorestart,
       source  => $jenkins::manage_file_source,
       content => $jenkins::manage_file_content,
@@ -399,7 +436,7 @@ class jenkins (
     file { 'jenkins.dir':
       ensure  => directory,
       path    => $jenkins::config_dir,
-      require => Class['jenkins::install'],
+      require => Package['jenkins'],
       notify  => $jenkins::manage_service_autorestart,
       source  => $source_dir,
       recurse => true,
@@ -486,6 +523,24 @@ class jenkins (
       direction   => 'input',
       tool        => $jenkins::firewall_tool,
       enable      => $jenkins::manage_firewall,
+    }
+  }
+ 
+  if $jenkins::bool_firewall == true {
+    firewall { 'jenkins_updates_out_tcp_80':
+      destination => [ 'updates.jenkins-ci.org', 'mirrors.jenkins-ci.org',
+	# We could of course also write something that dynamically fetches these
+	'mirror.bit.edu.cn','dl.aragost.com','jenkins.mirror.isppower.de',
+	'mirror.esuni.jp','ftp.nluug.nl','ftp.nluug.nl','ftp.icm.edu.pl',
+	'ftp.icm.edu.pl','mirrors.esast.com','mirrors.karan.org',
+	'mirror.xmission.com','ftp-chi.osuosl.org','ftp-nyc.osuosl.org'
+	 ],
+      protocol    => 'tcp',
+      port        => 80,
+      action      => 'allow',
+      direction   => 'output',
+      tool        => $jenkins::firewall_tool,
+#      enable      => $jenkins::manage_firewall, # TODO; uncomment, but do enable when running in tomcat
     }
   }
 
