@@ -542,6 +542,22 @@ class jenkins (
       tool        => $jenkins::firewall_tool,
 #      enable      => $jenkins::manage_firewall, # TODO; uncomment, but do enable when running in tomcat
     }
+
+    firewall { 'jenkins_updates_out_tcp_443':
+      destination => [ 'updates.jenkins-ci.org', 'mirrors.jenkins-ci.org',
+	# We could of course also write something that dynamically fetches these
+	'mirror.bit.edu.cn','dl.aragost.com','jenkins.mirror.isppower.de',
+	'mirror.esuni.jp','ftp.nluug.nl','ftp.nluug.nl','ftp.icm.edu.pl',
+	'ftp.icm.edu.pl','mirrors.esast.com','mirrors.karan.org',
+	'mirror.xmission.com','ftp-chi.osuosl.org','ftp-nyc.osuosl.org'
+	 ],
+      protocol    => 'tcp',
+      port        => 443,
+      action      => 'allow',
+      direction   => 'output',
+      tool        => $jenkins::firewall_tool,
+#      enable      => $jenkins::manage_firewall, # TODO; uncomment, but do enable when running in tomcat
+    }
   }
 
 
